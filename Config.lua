@@ -39,6 +39,7 @@ local defaults = {
             -- each entry: { color = {r,g,b} }
         },
         combatOnly = false,
+        glowType = "Proc Glow",
         hideAnimations = {
             castbar = true
         }
@@ -245,6 +246,7 @@ local function ExportProfile()
         items = addon.db.profile.items,
         spells = addon.db.profile.spells,
         combatOnly = addon.db.profile.combatOnly,
+        glowType = addon.db.profile.glowType,
         hideAnimations = addon.db.profile.hideAnimations
     }
     local serialized = AceSerializer:Serialize(data)
@@ -331,6 +333,9 @@ local function ImportProfile(str)
     end
     if data.combatOnly ~= nil then
         addon.db.profile.combatOnly = data.combatOnly and true or false
+    end
+    if data.glowType then
+        addon.db.profile.glowType = data.glowType
     end
     if data.hideAnimations and type(data.hideAnimations) == "table" then
         addon.db.profile.hideAnimations.castbar = data.hideAnimations.castbar and true or false
@@ -961,6 +966,27 @@ local function GetOptions()
                             elseif not v then
                                 addon:InvalidateAllCaches()
                             end
+                        end
+                    },
+                    glowType = {
+                        type = "select",
+                        name = "Glow Type",
+                        desc = "Choose which glow effect to use on action buttons.",
+                        order = 2,
+                        width = "normal",
+                        values = {
+                            ["Proc Glow"] = "Proc Glow",
+                            ["Pixel Glow"] = "Pixel Glow",
+                            ["Autocast Shine"] = "Autocast Shine",
+                            ["Action Button Glow"] = "Action Button Glow"
+                        },
+                        get = function()
+                            return addon.db.profile.glowType or "Proc Glow"
+                        end,
+                        set = function(_, v)
+                            addon:HideAllGlows()
+                            addon.db.profile.glowType = v
+                            addon:InvalidateAllCaches()
                         end
                     },
                     animHeader = {
