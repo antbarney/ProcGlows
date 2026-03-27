@@ -45,35 +45,61 @@ local thirdPartyDirty = true
 
 local function CollectThirdPartyButtons()
     wipe(thirdPartyButtons)
+    local seen = {}
 
-    -- Bartender4  (LibActionButton buttons named BT4Button1 … BT4Button120)
-    if _G["Bartender4"] then
-        for i = 1, 120 do
-            local btn = _G["BT4Button" .. i]
-            if btn then
+    -- LibActionButton-1.0 registry (catches Bartender4, Dominos, and any other LAB addon)
+    local LAB = LibStub and LibStub("LibActionButton-1.0", true)
+    if LAB and LAB.GetAllButtons then
+        for btn in pairs(LAB:GetAllButtons()) do
+            if not seen[btn] then
+                seen[btn] = true
                 thirdPartyButtons[#thirdPartyButtons + 1] = btn
             end
         end
     end
 
-    -- Dominos  (LibActionButton buttons named DominosActionButton1 … DominosActionButton168)
+    -- Bartender4  (BT4Button1 … BT4Button180, up to 15 bars × 12 buttons)
+    if _G["Bartender4"] then
+        for i = 1, 180 do
+            local btn = _G["BT4Button" .. i]
+            if btn and not seen[btn] then
+                seen[btn] = true
+                thirdPartyButtons[#thirdPartyButtons + 1] = btn
+            end
+        end
+    end
+
+    -- Dominos  (DominosActionButton1 … DominosActionButton168)
     if _G["Dominos"] then
         for i = 1, 168 do
             local btn = _G["DominosActionButton" .. i]
-            if btn then
+            if btn and not seen[btn] then
+                seen[btn] = true
                 thirdPartyButtons[#thirdPartyButtons + 1] = btn
             end
         end
     end
 
-    -- ElvUI  (buttons named ElvUI_Bar<1-10>Button<1-12>)
+    -- ElvUI  (ElvUI_Bar<1-15>Button<1-14>)
     if _G["ElvUI"] then
-        for bar = 1, 10 do
-            for slot = 1, 12 do
+        for bar = 1, 15 do
+            for slot = 1, 14 do
                 local btn = _G["ElvUI_Bar" .. bar .. "Button" .. slot]
-                if btn then
+                if btn and not seen[btn] then
+                    seen[btn] = true
                     thirdPartyButtons[#thirdPartyButtons + 1] = btn
                 end
+            end
+        end
+    end
+
+    -- ElvUI LibActionButton-1.0-ElvUI fork
+    local LAB_Elv = LibStub and LibStub("LibActionButton-1.0-ElvUI", true)
+    if LAB_Elv and LAB_Elv.GetAllButtons then
+        for btn in pairs(LAB_Elv:GetAllButtons()) do
+            if not seen[btn] then
+                seen[btn] = true
+                thirdPartyButtons[#thirdPartyButtons + 1] = btn
             end
         end
     end
