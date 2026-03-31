@@ -168,7 +168,8 @@ function addon:RebuildTables()
                             useDefaultColor = entry.useDefaultColor,
                             procSound = entry.procSound,
                             glowCooldownManager = entry.glowCooldownManager,
-                            showStacks = entry.showStacks
+                            showStacks = entry.showStacks,
+                            glowType = entry.glowType
                         }
                     end
                 end
@@ -190,7 +191,8 @@ function addon:RebuildTables()
                         b = entry.color.b
                     },
                     useDefaultColor = entry.useDefaultColor,
-                    procSound = entry.procSound
+                    procSound = entry.procSound,
+                    glowType = entry.glowType
                 }
             end
         end
@@ -212,7 +214,8 @@ function addon:RebuildTables()
                             },
                             useDefaultColor = entry.useDefaultColor,
                             procSound = entry.procSound,
-                            glowCooldownManager = entry.glowCooldownManager
+                            glowCooldownManager = entry.glowCooldownManager,
+                            glowType = entry.glowType
                         }
                     end
                 end
@@ -346,6 +349,15 @@ local function ImportProfile(str)
     return true
 end
 
+-- ─── Shared glow type dropdown values ────────────────────────────────────────
+local GLOW_TYPE_VALUES = {
+    ["Default"] = "Default (use global)",
+    ["Proc Glow"] = "Proc Glow",
+    ["Pixel Glow"] = "Pixel Glow",
+    ["Autocast Shine"] = "Autocast Shine",
+    ["Action Button Glow"] = "Action Button Glow"
+}
+
 -- ─── New-entry scratch state ─────────────────────────────────────────────────
 local newAura = {
     buffSpellID = "",
@@ -358,7 +370,8 @@ local newAura = {
     useDefaultColor = true,
     procSound = "None",
     glowCooldownManager = false,
-    showStacks = false
+    showStacks = false,
+    glowType = "Default"
 }
 
 -- Scan BuffIconCooldownViewer for available buff/proc spell IDs
@@ -388,7 +401,8 @@ local newItem = {
     g = 0.5,
     b = 1,
     useDefaultColor = true,
-    procSound = "None"
+    procSound = "None",
+    glowType = "Default"
 }
 local newSpell = {
     spellID = "",
@@ -397,7 +411,8 @@ local newSpell = {
     b = 0,
     useDefaultColor = true,
     procSound = "None",
-    glowCooldownManager = false
+    glowCooldownManager = false,
+    glowType = "Default"
 }
 
 -- ─── Options table ───────────────────────────────────────────────────────────
@@ -548,6 +563,20 @@ local function GetOptions()
                                     newAura.showStacks = v
                                 end
                             },
+                            glowType = {
+                                type = "select",
+                                name = "Glow Type",
+                                desc = "Override the glow effect for this entry. 'Default' uses the global setting.",
+                                order = 5.8,
+                                width = "normal",
+                                values = GLOW_TYPE_VALUES,
+                                get = function()
+                                    return newAura.glowType
+                                end,
+                                set = function(_, v)
+                                    newAura.glowType = v
+                                end
+                            },
                             add = {
                                 type = "execute",
                                 name = "Add Aura",
@@ -579,7 +608,8 @@ local function GetOptions()
                                         useDefaultColor = newAura.useDefaultColor,
                                         procSound = newAura.procSound,
                                         glowCooldownManager = newAura.glowCooldownManager,
-                                        showStacks = newAura.showStacks
+                                        showStacks = newAura.showStacks,
+                                        glowType = newAura.glowType
                                     }
                                     addon:RebuildTables()
                                     -- reset
@@ -594,6 +624,7 @@ local function GetOptions()
                                     newAura.procSound = "None"
                                     newAura.glowCooldownManager = false
                                     newAura.showStacks = false
+                                    newAura.glowType = "Default"
                                     print("|cff00ff00[ProcGlows]|r Aura added: " .. SpellName(buffID) .. " (" .. buffID .. ")")
                                 end
                             }
@@ -678,6 +709,20 @@ local function GetOptions()
                                     newItem.procSound = v
                                 end
                             },
+                            glowType = {
+                                type = "select",
+                                name = "Glow Type",
+                                desc = "Override the glow effect for this entry. 'Default' uses the global setting.",
+                                order = 2.8,
+                                width = "normal",
+                                values = GLOW_TYPE_VALUES,
+                                get = function()
+                                    return newItem.glowType
+                                end,
+                                set = function(_, v)
+                                    newItem.glowType = v
+                                end
+                            },
                             add = {
                                 type = "execute",
                                 name = "Add Item",
@@ -697,7 +742,8 @@ local function GetOptions()
                                             b = newItem.b
                                         },
                                         useDefaultColor = newItem.useDefaultColor,
-                                        procSound = newItem.procSound
+                                        procSound = newItem.procSound,
+                                        glowType = newItem.glowType
                                     }
                                     addon:RebuildTables()
                                     newItem.itemID = ""
@@ -706,6 +752,7 @@ local function GetOptions()
                                     newItem.b = 1
                                     newItem.useDefaultColor = true
                                     newItem.procSound = "None"
+                                    newItem.glowType = "Default"
                                     print("|cff00ff00[ProcGlows]|r Item added: " .. ItemName(id) .. " (" .. id .. ")")
                                 end
                             }
@@ -801,6 +848,20 @@ local function GetOptions()
                                     newSpell.glowCooldownManager = v
                                 end
                             },
+                            glowType = {
+                                type = "select",
+                                name = "Glow Type",
+                                desc = "Override the glow effect for this entry. 'Default' uses the global setting.",
+                                order = 2.9,
+                                width = "normal",
+                                values = GLOW_TYPE_VALUES,
+                                get = function()
+                                    return newSpell.glowType
+                                end,
+                                set = function(_, v)
+                                    newSpell.glowType = v
+                                end
+                            },
                             add = {
                                 type = "execute",
                                 name = "Add Spell",
@@ -822,7 +883,8 @@ local function GetOptions()
                                         },
                                         useDefaultColor = newSpell.useDefaultColor,
                                         procSound = newSpell.procSound,
-                                        glowCooldownManager = newSpell.glowCooldownManager
+                                        glowCooldownManager = newSpell.glowCooldownManager,
+                                        glowType = newSpell.glowType
                                     }
                                     addon:RebuildTables()
                                     newSpell.spellID = ""
@@ -832,6 +894,7 @@ local function GetOptions()
                                     newSpell.useDefaultColor = true
                                     newSpell.procSound = "None"
                                     newSpell.glowCooldownManager = false
+                                    newSpell.glowType = "Default"
                                     print("|cff00ff00[ProcGlows]|r Spell added: " .. SpellName(id) .. " (" .. id .. ")")
                                 end
                             }
@@ -970,8 +1033,8 @@ local function GetOptions()
                     },
                     glowType = {
                         type = "select",
-                        name = "Glow Type",
-                        desc = "Choose which glow effect to use on action buttons.",
+                        name = "Default Glow Type",
+                        desc = "Choose the default glow effect for entries set to 'Default'. Individual entries can override this.",
                         order = 2,
                         width = "normal",
                         values = {
@@ -1176,6 +1239,22 @@ local function GetOptions()
                                         addon:RebuildTables()
                                     end
                                 },
+                                glowType = {
+                                    type = "select",
+                                    name = "Glow Type",
+                                    desc = "Override the glow effect for this entry. 'Default' uses the global setting.",
+                                    order = 7,
+                                    width = "normal",
+                                    values = GLOW_TYPE_VALUES,
+                                    get = function()
+                                        return entry.glowType or "Default"
+                                    end,
+                                    set = function(_, v)
+                                        entry.glowType = v
+                                        addon:HideAllGlows()
+                                        addon:RebuildTables()
+                                    end
+                                },
                                 spacer = {
                                     type = "description",
                                     name = "",
@@ -1274,6 +1353,22 @@ local function GetOptions()
                     end,
                     set = function(_, v)
                         entry.procSound = v
+                        addon:RebuildTables()
+                    end
+                },
+                glowType = {
+                    type = "select",
+                    name = "Glow Type",
+                    desc = "Override the glow effect for this entry. 'Default' uses the global setting.",
+                    order = 4,
+                    width = "normal",
+                    values = GLOW_TYPE_VALUES,
+                    get = function()
+                        return entry.glowType or "Default"
+                    end,
+                    set = function(_, v)
+                        entry.glowType = v
+                        addon:HideAllGlows()
                         addon:RebuildTables()
                     end
                 },
@@ -1393,6 +1488,22 @@ local function GetOptions()
                                 end,
                                 set = function(_, v)
                                     entry.glowCooldownManager = v
+                                    addon:RebuildTables()
+                                end
+                            },
+                            glowType = {
+                                type = "select",
+                                name = "Glow Type",
+                                desc = "Override the glow effect for this entry. 'Default' uses the global setting.",
+                                order = 5,
+                                width = "normal",
+                                values = GLOW_TYPE_VALUES,
+                                get = function()
+                                    return entry.glowType or "Default"
+                                end,
+                                set = function(_, v)
+                                    entry.glowType = v
+                                    addon:HideAllGlows()
                                     addon:RebuildTables()
                                 end
                             },
@@ -1576,7 +1687,20 @@ initFrame:SetScript("OnEvent", function(self, event, loadedAddon)
     SLASH_MULEYOPG1 = "/pg"
     SLASH_MULEYOPG2 = "/procglows"
     SlashCmdList["MULEYOPG"] = function()
+        AceConfigDialog:SetDefaultSize(addonName, 900, 650)
         AceConfigDialog:Open(addonName)
+        -- Widen the tree panels for auras/items/spells tabs
+        local frame = AceConfigDialog.OpenFrames[addonName]
+        if frame then
+            local status = frame:GetUserData("status") or frame.status
+            if status then
+                for _, tab in ipairs({"auras", "items", "spells"}) do
+                    status.groups = status.groups or {}
+                    status.groups[tab] = status.groups[tab] or {}
+                    status.groups[tab].treewidth = 270
+                end
+            end
+        end
         -- Auto-expand the current class group in the Auras tab
         AceConfigDialog:SelectGroup(addonName, "auras", "class_" .. addon.Class)
     end
