@@ -25,6 +25,7 @@ local spellButtonCache = {}
 local itemAnchorCache = {}
 local spellAnchorCache = {}
 local cdmSpellFrameCache = {}
+local actionSlotSnapshot = {}
 local spellCacheDirty = true
 local itemCacheDirty = true
 local stackTexts = {}
@@ -136,8 +137,8 @@ function addon:HideStackCount(frame)
     end
 end
 
-function addon:ShowProcGlow(button, r, g, b, soundKey)
-    local glowType = self.db and self.db.profile.glowType or "Proc Glow"
+function addon:ShowProcGlow(button, r, g, b, soundKey, entryGlowType)
+    local glowType = entryGlowType and entryGlowType ~= "Default" and entryGlowType or (self.db and self.db.profile.glowType or "Proc Glow")
     local color = r and {r, g, b, 1} or nil
 
     if glowType == "Proc Glow" then
@@ -503,9 +504,10 @@ function addon:CheckAuras()
                     if not activeGlows[aura] or not addon:HasProcGlow(aura) then
                         activeGlows[aura] = true
                         if iconGlowData.useDefaultColor then
-                            addon:ShowProcGlow(aura, nil, nil, nil, iconGlowData.procSound)
+                            addon:ShowProcGlow(aura, nil, nil, nil, iconGlowData.procSound, iconGlowData.glowType)
                         else
-                            addon:ShowProcGlow(aura, iconGlowData.color.r, iconGlowData.color.g, iconGlowData.color.b, iconGlowData.procSound)
+                            addon:ShowProcGlow(aura, iconGlowData.color.r, iconGlowData.color.g, iconGlowData.color.b, iconGlowData.procSound,
+                                iconGlowData.glowType)
                         end
                     end
                 else
@@ -527,9 +529,10 @@ function addon:CheckAuras()
                         if aura.Cooldown:IsShown() and not suppressed then
                             if not addon:HasProcGlow(button) then
                                 if auraData.useDefaultColor then
-                                    addon:ShowProcGlow(button, nil, nil, nil, auraData.procSound)
+                                    addon:ShowProcGlow(button, nil, nil, nil, auraData.procSound, auraData.glowType)
                                 else
-                                    addon:ShowProcGlow(button, auraData.color.r, auraData.color.g, auraData.color.b, auraData.procSound)
+                                    addon:ShowProcGlow(button, auraData.color.r, auraData.color.g, auraData.color.b, auraData.procSound,
+                                        auraData.glowType)
                                 end
                             end
                             -- Show stack count on the action button
@@ -551,9 +554,10 @@ function addon:CheckAuras()
                                 if not activeGlows[frame] or not addon:HasProcGlow(frame) then
                                     activeGlows[frame] = true
                                     if auraData.useDefaultColor then
-                                        addon:ShowProcGlow(frame, nil, nil, nil, auraData.procSound)
+                                        addon:ShowProcGlow(frame, nil, nil, nil, auraData.procSound, auraData.glowType)
                                     else
-                                        addon:ShowProcGlow(frame, auraData.color.r, auraData.color.g, auraData.color.b, auraData.procSound)
+                                        addon:ShowProcGlow(frame, auraData.color.r, auraData.color.g, auraData.color.b, auraData.procSound,
+                                            auraData.glowType)
                                     end
                                 end
                                 -- Show stack count on the CDM spell frame
@@ -589,9 +593,9 @@ function addon:CheckItemCooldowns()
                 if not suppressed and C_Item.GetItemCount(item.itemID) > 0 and C_Item.IsUsableItem(item.itemID) and (not button.cooldown:IsShown()) then
                     if not addon:HasProcGlow(button) then
                         if item.useDefaultColor then
-                            addon:ShowProcGlow(button, nil, nil, nil, item.procSound)
+                            addon:ShowProcGlow(button, nil, nil, nil, item.procSound, item.glowType)
                         else
-                            addon:ShowProcGlow(button, item.color.r, item.color.g, item.color.b, item.procSound)
+                            addon:ShowProcGlow(button, item.color.r, item.color.g, item.color.b, item.procSound, item.glowType)
                         end
                     end
                 else
@@ -624,9 +628,10 @@ function addon:CheckSpellCooldowns()
                     if not activeGlows[button] or not addon:HasProcGlow(button) then
                         activeGlows[button] = true
                         if spellData.useDefaultColor then
-                            addon:ShowProcGlow(button, nil, nil, nil, spellData.procSound)
+                            addon:ShowProcGlow(button, nil, nil, nil, spellData.procSound, spellData.glowType)
                         else
-                            addon:ShowProcGlow(button, spellData.color.r, spellData.color.g, spellData.color.b, spellData.procSound)
+                            addon:ShowProcGlow(button, spellData.color.r, spellData.color.g, spellData.color.b, spellData.procSound,
+                                spellData.glowType)
                         end
                     end
                 else
@@ -649,9 +654,10 @@ function addon:CheckSpellCooldowns()
                         if not activeGlows[frame] or not addon:HasProcGlow(frame) then
                             activeGlows[frame] = true
                             if spellData.useDefaultColor then
-                                addon:ShowProcGlow(frame, nil, nil, nil, spellData.procSound)
+                                addon:ShowProcGlow(frame, nil, nil, nil, spellData.procSound, spellData.glowType)
                             else
-                                addon:ShowProcGlow(frame, spellData.color.r, spellData.color.g, spellData.color.b, spellData.procSound)
+                                addon:ShowProcGlow(frame, spellData.color.r, spellData.color.g, spellData.color.b, spellData.procSound,
+                                    spellData.glowType)
                             end
                         end
                     else
@@ -668,9 +674,42 @@ end
 
 -- Hooks
 addon.events:HookScript("OnEvent", function(self, event, ...)
-    if event == "PLAYER_SPECIALIZATION_CHANGED" or event == "PLAYER_TALENT_UPDATE" or event == "ACTIONBAR_SLOT_CHANGED" or event ==
-        "PLAYER_ENTERING_WORLD" or event == "UPDATE_OVERRIDE_ACTIONBAR" or event == "UPDATE_BONUS_ACTIONBAR" or event == "UPDATE_VEHICLE_ACTIONBAR" then
+    if event == "PLAYER_SPECIALIZATION_CHANGED" or event == "PLAYER_TALENT_UPDATE" or event == "PLAYER_ENTERING_WORLD" or event ==
+        "UPDATE_OVERRIDE_ACTIONBAR" or event == "UPDATE_BONUS_ACTIONBAR" or event == "UPDATE_VEHICLE_ACTIONBAR" then
+        -- Rebuild the slot snapshot so ACTIONBAR_SLOT_CHANGED can detect real changes
+        wipe(actionSlotSnapshot)
+        for s = 1, MAX_ACTION_SLOT do
+            if HasAction(s) then
+                local aType, id = GetActionInfo(s)
+                actionSlotSnapshot[s] = aType and (aType .. ":" .. (id or 0)) or nil
+            end
+        end
         addon:InvalidateAllCaches()
+        return
+    end
+    if event == "ACTIONBAR_SLOT_CHANGED" then
+        local slot = ...
+        if slot == 0 then
+            -- slot 0 means "all slots" – full rebuild
+            wipe(actionSlotSnapshot)
+            for s = 1, MAX_ACTION_SLOT do
+                if HasAction(s) then
+                    local aType, id = GetActionInfo(s)
+                    actionSlotSnapshot[s] = aType and (aType .. ":" .. (id or 0)) or nil
+                end
+            end
+            addon:InvalidateAllCaches()
+        else
+            local newKey
+            if HasAction(slot) then
+                local aType, id = GetActionInfo(slot)
+                newKey = aType and (aType .. ":" .. (id or 0)) or nil
+            end
+            if actionSlotSnapshot[slot] ~= newKey then
+                actionSlotSnapshot[slot] = newKey
+                addon:InvalidateAllCaches()
+            end
+        end
         return
     end
     if event == "PLAYER_REGEN_DISABLED" then
