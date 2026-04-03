@@ -27,10 +27,6 @@ end
 
 -- Disable the CastBar within ActionButtons
 local function hideCastAnimations(button)
-    if config and config.castbar then
-        button.cooldown:SetDrawBling(true)
-    end
-
     hooksecurefunc(button, "PlaySpellCastAnim", hideSpellCastAnimFrame)
     hooksecurefunc(button, "PlaySpellInterruptedAnim", hideInterruptDisplay)
     hooksecurefunc(button, "PlayTargettingReticleAnim", hideTargetReticleAnimFrame)
