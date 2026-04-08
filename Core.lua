@@ -29,6 +29,7 @@ local actionSlotSnapshot = {}
 local spellCacheDirty = true
 local itemCacheDirty = true
 local stackTexts = {}
+local recentSounds = {}
 local LSM = LibStub("LibSharedMedia-3.0")
 local BUTTON_PREFIXES = {"ActionButton", "MultiBarBottomLeftButton", "MultiBarBottomRightButton", "MultiBarRightButton", "MultiBarLeftButton",
                          "MultiBar5Button", "MultiBar6Button", "MultiBar7Button", "MultiBar8Button"}
@@ -179,11 +180,15 @@ function addon:ShowProcGlow(button, r, g, b, soundKey, entryGlowType)
     end
 
     if not allGlowingButtons[button] then
-        -- Play per-entry proc sound
-        if soundKey and soundKey ~= "None" then
+        -- Play per-entry proc sound (once per sound key per frame)
+        if soundKey and soundKey ~= "None" and not recentSounds[soundKey] then
             local soundFile = LSM:Fetch(LSM.MediaType.SOUND, soundKey, true)
             if soundFile then
-                PlaySoundFile(soundFile, "Master")
+                PlaySoundFile(soundFile, "SFX")
+                recentSounds[soundKey] = true
+                C_Timer.After(0, function()
+                    recentSounds[soundKey] = nil
+                end)
             end
         end
     end
@@ -649,8 +654,11 @@ function addon:CheckSpellCooldowns()
         if spellData.glowCooldownManager then
             local cdmFrames = cdmSpellFrameCache[spellID]
             if cdmFrames then
+                local cdInfo = C_Spell.GetSpellCooldown(spellID)
+                local cdmOnCooldown = cdInfo and cdInfo.duration > 0 and not cdInfo.isOnGCD
+                local cdmShouldGlow = not suppressed and C_Spell.IsSpellUsable(spellID) and not cdmOnCooldown
                 for _, frame in ipairs(cdmFrames) do
-                    if shouldGlow then
+                    if cdmShouldGlow then
                         if not activeGlows[frame] or not addon:HasProcGlow(frame) then
                             activeGlows[frame] = true
                             if spellData.useDefaultColor then
