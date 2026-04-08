@@ -184,7 +184,7 @@ function addon:ShowProcGlow(button, r, g, b, soundKey, entryGlowType)
         if soundKey and soundKey ~= "None" and not recentSounds[soundKey] then
             local soundFile = LSM:Fetch(LSM.MediaType.SOUND, soundKey, true)
             if soundFile then
-                PlaySoundFile(soundFile, "SFX")
+                PlaySoundFile(soundFile, "Master")
                 recentSounds[soundKey] = true
                 C_Timer.After(0, function()
                     recentSounds[soundKey] = nil
