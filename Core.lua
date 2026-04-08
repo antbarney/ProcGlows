@@ -28,6 +28,7 @@ local cdmSpellFrameCache = {}
 local actionSlotSnapshot = {}
 local spellCacheDirty = true
 local itemCacheDirty = true
+local cdmCacheDirty = true
 local stackTexts = {}
 local recentSounds = {}
 local LSM = LibStub("LibSharedMedia-3.0")
@@ -369,10 +370,10 @@ function addon:InvalidateAllCaches()
     spellCacheDirty = true
     itemCacheDirty = true
     thirdPartyDirty = true
+    cdmCacheDirty = true
     addon:RebuildAuraAnchorCache()
     addon:RebuildSpellButtonCache()
     addon:RebuildItemButtonCache()
-    addon:RebuildCDMSpellFrameCache()
     addon:CleanupOrphanedGlows()
 end
 
@@ -454,12 +455,28 @@ function addon:RebuildSpellButtonCache()
 end
 
 -- Build a spellID -> {frames} cache from EssentialCooldownViewer's pool.
--- The pool is dynamic so we rebuild every check cycle.
+-- The pool is dynamic; a dirty flag (set by hooking pool Acquire) triggers a
+-- rebuild only when frames have actually changed.
+local cdmPoolHooked = false
+local function HookCDMPool()
+    if cdmPoolHooked then
+        return
+    end
+    if not EssentialCooldownViewer or not EssentialCooldownViewer.itemFramePool then
+        return
+    end
+    hooksecurefunc(EssentialCooldownViewer.itemFramePool, "Acquire", function()
+        cdmCacheDirty = true
+    end)
+    cdmPoolHooked = true
+end
+
 function addon:RebuildCDMSpellFrameCache()
     wipe(cdmSpellFrameCache)
     if not EssentialCooldownViewer or not EssentialCooldownViewer.itemFramePool then
         return
     end
+    HookCDMPool()
     for frame in EssentialCooldownViewer.itemFramePool:EnumerateActive() do
         if frame and frame.GetBaseSpellID then
             local spellID = frame:GetBaseSpellID()
@@ -471,12 +488,21 @@ function addon:RebuildCDMSpellFrameCache()
             end
         end
     end
+    cdmCacheDirty = false
+end
+
+local function EnsureCDMCache()
+    if cdmCacheDirty then
+        addon:RebuildCDMSpellFrameCache()
+    end
 end
 
 function addon:CheckAuras()
     if not addon.Auras then
         return
     end
+
+    EnsureCDMCache()
 
     local suppressed = addon:IsCombatOnly()
 
@@ -616,18 +642,20 @@ function addon:CheckSpellCooldowns()
         return
     end
 
+    EnsureCDMCache()
+
     local suppressed = addon:IsCombatOnly()
 
-    local onCooldown
-    local shouldGlow
-
     for spellID, spellData in pairs(addon.Spells) do
+        local cdInfo = C_Spell.GetSpellCooldown(spellID)
+        local isUsable = not suppressed and C_Spell.IsSpellUsable(spellID)
+
+        -- Action bar buttons
         local buttons = spellAnchorCache[spellID]
         if buttons then
-            local cdInfo = C_Spell.GetSpellCooldown(spellID)
             for _, button in ipairs(buttons) do
-                onCooldown = button.cooldown:IsShown() and not cdInfo.isOnGCD
-                shouldGlow = not suppressed and C_Spell.IsSpellUsable(spellID) and not onCooldown
+                local onCooldown = button.cooldown:IsShown() and not cdInfo.isOnGCD
+                local shouldGlow = isUsable and not onCooldown
 
                 if shouldGlow then
                     if not activeGlows[button] or not addon:HasProcGlow(button) then
@@ -647,18 +675,15 @@ function addon:CheckSpellCooldowns()
                 end
             end
         end
-    end
 
-    -- Glow spell icons in EssentialCooldownViewer (CooldownManager)
-    for spellID, spellData in pairs(addon.Spells) do
+        -- CDM spell frames (EssentialCooldownViewer)
         if spellData.glowCooldownManager then
             local cdmFrames = cdmSpellFrameCache[spellID]
             if cdmFrames then
-                local cdInfo = C_Spell.GetSpellCooldown(spellID)
                 local cdmOnCooldown = cdInfo and cdInfo.duration > 0 and not cdInfo.isOnGCD
-                local cdmShouldGlow = not suppressed and C_Spell.IsSpellUsable(spellID) and not cdmOnCooldown
+                local shouldGlow = isUsable and not cdmOnCooldown
                 for _, frame in ipairs(cdmFrames) do
-                    if cdmShouldGlow then
+                    if shouldGlow then
                         if not activeGlows[frame] or not addon:HasProcGlow(frame) then
                             activeGlows[frame] = true
                             if spellData.useDefaultColor then
