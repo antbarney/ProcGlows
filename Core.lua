@@ -656,7 +656,7 @@ function addon:CheckSpellCooldowns()
             local cdmFrames = cdmSpellFrameCache[spellID]
             if cdmFrames then
                 for _, frame in ipairs(cdmFrames) do
-                    if isUsable then
+                    if shouldGlow then
                         if not activeGlows[frame] or not addon:HasProcGlow(frame) then
                             activeGlows[frame] = true
                             if spellData.useDefaultColor then
