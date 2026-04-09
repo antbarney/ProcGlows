@@ -29,6 +29,7 @@ local actionSlotSnapshot = {}
 local spellCacheDirty = true
 local itemCacheDirty = true
 local stackTexts = {}
+local recentSounds = {}
 local LSM = LibStub("LibSharedMedia-3.0")
 local BUTTON_PREFIXES = {"ActionButton", "MultiBarBottomLeftButton", "MultiBarBottomRightButton", "MultiBarRightButton", "MultiBarLeftButton",
                          "MultiBar5Button", "MultiBar6Button", "MultiBar7Button", "MultiBar8Button"}
@@ -179,11 +180,15 @@ function addon:ShowProcGlow(button, r, g, b, soundKey, entryGlowType)
     end
 
     if not allGlowingButtons[button] then
-        -- Play per-entry proc sound
-        if soundKey and soundKey ~= "None" then
+        -- Play per-entry proc sound (once per sound key per frame)
+        if soundKey and soundKey ~= "None" and not recentSounds[soundKey] then
             local soundFile = LSM:Fetch(LSM.MediaType.SOUND, soundKey, true)
             if soundFile then
                 PlaySoundFile(soundFile, "Master")
+                recentSounds[soundKey] = true
+                C_Timer.After(0, function()
+                    recentSounds[soundKey] = nil
+                end)
             end
         end
     end
